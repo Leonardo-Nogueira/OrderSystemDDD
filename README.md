@@ -21,3 +21,5 @@ Conforme as regras do desafio, os seguintes métodos foram implementados em `Ord
    ```bash
    git clone [https://github.com/Leonardo-Nogueira/OrderSystemDDD.git](https://github.com/Leonardo-Nogueira/OrderSystemDDD.git)
    cd OrderSystemDDD
+
+## Para facilitar e rodar os testes, instale o plugin do jest.   
