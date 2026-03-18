@@ -3,6 +3,10 @@ import Customer from "../../../../domain/customer/entity/customer";
 import Address from "../../../../domain/customer/value-object/address";
 import CustomerModel from "./customer.model";
 import CustomerRepository from "./customer.repository";
+import SendLogWhenCustomerIsCreatedHandler01 from "../../../../domain/customer/event/handler/Send-log-when-customer-is-created.handler-1"
+import SendLogWhenCustomerIsCreatedHandler02 from "../../../../domain/customer/event/handler/Send-log-when-customer-is-created.handler-2"
+import EventDispatcher from "../../../../domain/@shared/event/event-dispatcher"
+import CustomerCreatedEvent from "../../../../domain/customer/event/customer-created.event"
 
 describe("Customer repository test", () => {
   let sequelize: Sequelize;
@@ -24,6 +28,7 @@ describe("Customer repository test", () => {
   });
 
   it("should create a customer", async () => {
+
     const customerRepository = new CustomerRepository();
     const customer = new Customer("123", "Customer 1");
     const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
@@ -108,5 +113,37 @@ describe("Customer repository test", () => {
     expect(customers).toHaveLength(2);
     expect(customers).toContainEqual(customer1);
     expect(customers).toContainEqual(customer2);
+  });
+
+
+  it("should create a customer and call event handlers", async () => {
+    const eventDispatcher = new EventDispatcher();
+
+    const eventHandler1 = new SendLogWhenCustomerIsCreatedHandler01();
+    const eventHandler2 = new SendLogWhenCustomerIsCreatedHandler02();
+
+    const spyHandler1 = jest.spyOn(eventHandler1, "handle");
+    const spyHandler2 = jest.spyOn(eventHandler2, "handle");
+
+    eventDispatcher.register("CustomerCreatedEvent", eventHandler1);
+    eventDispatcher.register("CustomerCreatedEvent", eventHandler2);
+
+    const customerRepository = new CustomerRepository(eventDispatcher);
+    const customer = new Customer("1", "Customer");
+    const address = new Address("Street 1", 1, "Zipcode 1", "City 1");
+    customer.Address = address;
+
+    await customerRepository.create(customer);
+
+    expect(spyHandler1).toHaveBeenCalled();
+    expect(spyHandler2).toHaveBeenCalled();
+
+    expect(spyHandler1).toHaveBeenCalledWith(expect.any(CustomerCreatedEvent));
+
+    const customerModel = await CustomerModel.findOne({ where: { id: "1" } });
+    expect(customerModel.toJSON()).toMatchObject({
+      id: "1",
+      name: "Customer"
+    });
   });
 });
