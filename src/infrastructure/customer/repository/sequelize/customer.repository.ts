@@ -4,6 +4,7 @@ import CustomerRepositoryInterface from "../../../../domain/customer/repository/
 import CustomerModel from "./customer.model";
 import EventDispatcherInterface from "../../../../domain/@shared/event/event-dispatcher.interface"
 import CustomerCreatedEvent from "../../../../domain/customer/event/customer-created.event"
+import CustomerAddressChangedEvent from "../../../../domain/customer/event/customer-address-changed.event"
 
 export default class CustomerRepository implements CustomerRepositoryInterface {
 
@@ -44,6 +45,17 @@ export default class CustomerRepository implements CustomerRepositoryInterface {
         },
       }
     );
+
+    const eventData = {
+      id: entity.id,
+      nome: entity.name,
+      endereco: `${entity.Address.street}, ${entity.Address.number}, ${entity.Address.city}`
+    };
+
+    const addressChangedEvent = new CustomerAddressChangedEvent(eventData);
+
+    this.eventDispatcher?.notify(addressChangedEvent);
+
   }
 
   async find(id: string): Promise<Customer> {

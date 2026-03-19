@@ -5,8 +5,12 @@ import CustomerModel from "./customer.model";
 import CustomerRepository from "./customer.repository";
 import SendLogWhenCustomerIsCreatedHandler01 from "../../../../domain/customer/event/handler/Send-log-when-customer-is-created.handler-1"
 import SendLogWhenCustomerIsCreatedHandler02 from "../../../../domain/customer/event/handler/Send-log-when-customer-is-created.handler-2"
+import SendLogWhenCustomerAddressIsChanged from "../../../../domain/customer/event/handler/Send-log-when-customer-address-is-changed.handler"
 import EventDispatcher from "../../../../domain/@shared/event/event-dispatcher"
 import CustomerCreatedEvent from "../../../../domain/customer/event/customer-created.event"
+import CustomerAddressChangedEvent from "../../../../domain/customer/event/customer-address-changed.event"
+
+
 
 describe("Customer repository test", () => {
   let sequelize: Sequelize;
@@ -146,4 +150,31 @@ describe("Customer repository test", () => {
       name: "Customer"
     });
   });
+
+  it("should notify when customer address is changed", async () => {
+    const eventDispatcher = new EventDispatcher();
+    const eventHandler = new SendLogWhenCustomerAddressIsChanged();
+    const spyEventHandler = jest.spyOn(eventHandler, "handle");
+
+    // REGISTRO OBRIGATÓRIO
+    eventDispatcher.register("CustomerAddressChangedEvent", eventHandler);
+
+    const customerRepository = new CustomerRepository(eventDispatcher);
+
+    const customer = new Customer("123", "Cliente 1");
+    const address = new Address("Rua A", 1, "12345", "Cidade");
+    customer.changeAddress(address);
+
+    // Cria o cliente primeiro para poder atualizar depois
+    await customerRepository.create(customer);
+
+    const newAddress = new Address("Rua B", 2, "54321", "Nova Cidade Full Cycle");
+    customer.changeAddress(newAddress);
+
+    // Executa o update que deve disparar o evento
+    await customerRepository.update(customer);
+    expect(spyEventHandler).toHaveBeenCalled();
+    expect(spyEventHandler).toHaveBeenCalledWith(expect.any(CustomerAddressChangedEvent));
+  });
+
 });
